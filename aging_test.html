@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<style>
+		body {
+			background-image: url('aging_test.jpg');
+			background-size: 200px 300px;
+			background-repeat: no-repeat;
+			background-attachment: fixed;
+			background-position: right bottom;
+		}
+		progress,
+		progress[role] {
+			appearance: none;
+			-moz-appearance: none;
+			-webkit-appearance: none;
+
+			border: none;
+
+			background-size: auto;
+
+			width: 400px;
+			height: 10px;
+		}
+		progress[role]:after {
+			background-image: none;
+		}
+		progress[role] strong {
+			display: none;
+		}
+		progress::-webkit-progress-bar {
+			background: #e6e6e6;
+		}
+		progress::-webkit-progress-value {
+			background: #0064b4;
+		}
+		</style>
+		<script>
+		var video_urls = [
+			"http://videl.url/1.mp4",
+			"http://videl.url/2.mp4",
+			"http://videl.url/3.mp4",
+			"http://videl.url/4.mp4",
+			"http://videl.url/5.mp4",
+			"http://videl.url/6.mp4",
+			"http://videl.url/7.mp4",
+			"http://videl.url/8.mp4"
+		];
+
+		var videoId=0;
+		var intervals = new Array();
+		function $(id) {
+			return document.getElementById(id);
+		}
+		function load(id) {
+			$("duration"+id).innerHTML = $(id).duration;
+		}
+		function play(id) {
+			$("duration"+id).innerHTML = $(id).duration;
+			if ( intervals[id] == undefined ) {
+				intervals[id] = setInterval(function() {
+					$("currentTime"+id).innerHTML = $(id).currentTime;
+				}, 1000/30);
+			}
+			$(id).play();
+		}
+		function pause(id) {
+			$(id).pause();
+		}
+		function addvideo() {
+			var url = video_urls[videoId%video_urls.length];
+
+			var id = ++videoId;
+			var element = document.createElement('div'); 
+			element.className = "videobox"; 
+			element.id = "video"+id;
+			var html = '<font size=2><table style="float:left"><tr><td><video class="video" id="'+id+'" '+'width="384" height="216" autoplay="autoplay"';
+			html += ' src="' + url + '">';
+			html += "</video></td><td>";
+
+			// info block
+			html += "video size : <span id='videoWidth"+id+"'>unknown</span> x <span id='videoHeight"+id+"'>unknown</span><br>";
+			html += "currentTime : <span id='currentTime"+id+"'>unknown</span><br>";
+			html += "duration : <span id='duration"+id+"'>unknown</span><br>";
+			html += "<progress id='playback_progress"+id+"' max=1></progress><br>";
+			html += "playbackRate : <span id='playbackRate"+id+"'>unknown</span><br>";
+			html += "readyState : <span id='readyState"+id+"'>unknown</span><br>";
+			html += "networkState : <span id='networkState"+id+"'>unknown</span><br>";
+			html += "paused[<span id='paused"+id+"'>?</span>] ended[<span id='ended"+id+"'>?</span>] seeking[<span id='seeking"+id+"'>?</span>]<br>";
+			html += "buffered.start : <span id='buffered_start"+id+"'>unknown</span><br>";
+			html += "buffered.end : <span id='buffered_end"+id+"'>unknown</span><br>";
+			html += "<progress id='buffered_progress"+id+"' max='1'></progress><br>";
+			html += "</td></tr></table></font>";
+
+			element.innerHTML = html;
+			// update info
+			if ( intervals[id] == undefined ) {
+				intervals[id] = setInterval(function() {
+					var arrayReadyState = [ "HAVE_NOTHING", "HAVE_METADATA", "HAVE_CURRENT_DATA", "HAVE_FUTURE_DATA", "HAVE_ENOUGH_DATA" ];
+					var arrayNetworkState = [ "NETWORK_EMPTY", "NETWORK_IDLE", "NETWORK_LOADING", "NETWORK_NO_SOURCE" ];
+
+					$("videoWidth"+id).innerHTML = $(id).videoWidth;
+					$("videoHeight"+id).innerHTML = $(id).videoHeight;
+					$("currentTime"+id).innerHTML = $(id).currentTime;
+					$("duration"+id).innerHTML = $(id).duration;
+					$("playback_progress"+id).value = $(id).duration>0 ? $(id).currentTime/$(id).duration : 0;
+					$("playbackRate"+id).innerHTML = $(id).playbackRate;
+					$("readyState"+id).innerHTML = $(id).readyState + " (" + arrayReadyState[$(id).readyState] + ")";
+					$("networkState"+id).innerHTML = $(id).networkState + " (" + arrayNetworkState[$(id).networkState] + ")";
+					$("paused"+id).innerHTML = $(id).paused ? "<font color=green>Y</font>" : "<font color=red>N</font>";
+					$("ended"+id).innerHTML = $(id).ended ? "<font color=green>Y</font>" : "<font color=red>N</font>";
+					$("seeking"+id).innerHTML = $(id).seeking ? "<font color=green>Y</font>" : "<font color=red>N</font>";
+					$("buffered_start"+id).innerHTML = $(id).buffered.length>0 ? $(id).buffered.start(0) : "unknown";
+					$("buffered_end"+id).innerHTML = $(id).buffered.length>0 ? $(id).buffered.end(0) : "unknown";
+					$("buffered_progress"+id).value = $(id).duration>0 ? $(id).buffered.end(0)/$(id).duration : 0;
+				}, 1000/30);
+			}
+			$('v1c').appendChild(element);
+		}
+		function deletevideo(id) {
+			if ( intervals[id] != undefined ) {
+				clearInterval(intervals[id]);
+				intervals[id] = undefined;
+			}
+			var elem = $(id);
+			elem.pause();
+			elem.src = "";
+			elem.innerHTML = "";
+			elem.parentNode.removeChild(elem);
+			elem = $('video'+id);
+			elem.parentNode.removeChild(elem);
+		}
+
+		// test codes
+		var TESTLOOP_CNT = 4;
+		var loop_count;
+		var cur_id;
+		function startTest() {
+			if ( videoId < 8 ) {
+				setTimeout(function() {
+					addvideo();
+					$("current_test_status").innerHTML = "Loading video #"+videoId;
+					cur_id = videoId;
+					startTest()
+				}, 3000);
+			}
+			else {
+				loop_count = TESTLOOP_CNT;
+				testRandomJump(Math.round(Math.random()*(videoId-1))+1);
+			}
+		}
+
+		function testRandomJump(id) {
+			cur_id = id;
+			if ( loop_count-- > 0 ) {
+				setTimeout(function() {
+					$(id).currentTime = Math.round(Math.random()*$(id).duration);
+					$(id).play();
+					$("current_test_status").innerHTML = "Random Jump test for video #"+id+" (left:"+loop_count+")";
+					testRandomJump(id);
+				}, Math.round(Math.random() * 10000)+5000);
+			}
+			else {
+				loop_count = TESTLOOP_CNT;
+				testRandomJump(Math.round(Math.random()*(videoId-1))+1);
+			}
+		}
+		function fullscreen() {
+			$(cur_id).webkitRequestFullScreen();
+		}
+		</script>
+		<title>Aging Tester</title>
+	</head>
+	<body>
+		<div id="Params">
+			<h1><span id='current_test_status'>test status..</span></h1>
+			<p>
+			<input type="button" value="Start Test" onclick="javascript:startTest()"> <input type="button" value="full screen" onclick="javascript:fullscreen()">
+			</p>
+		</div>
+
+		<div id="v1c"></div>
+	</body>
+</html>
+
