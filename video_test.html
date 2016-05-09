@@ -54,6 +54,30 @@ document.write("<source src=\""+getTestVideoUrl()+"\">");
 </script>
   </video>
   <hr>
+<script>
+var external_links = [
+  ['-= 일반 비디오 사이트들 =-', ''],
+  ['YouTube', 'http://www.youtube.com/html5'],
+  ['vimeo', 'http://vimeo.com'],
+  ['HTML5 Video', 'http://www.w3.org/2010/05/video/mediaevents.html'],
+  ['google', 'http://google.com'],
+];
+
+document.write("유용한 링크 : <select onChange='follow_link()' id='testSiteSelect'>");
+for (i=0; i<external_links.length; i++) {
+  document.write("<option value=\""+external_links[i][1]+"\">"+external_links[i][0]+"</option>");
+}
+document.write("</select>");
+
+function follow_link() {
+  var sel = document.getElementById("testSiteSelect");
+  var new_url = sel.options[sel.selectedIndex].value;
+  if(new_url) {
+    window.location.href = new_url;
+  }
+}
+</script>
+<br>
 <select onChange='change_stream(this)' id='videoUrlSelect_data1'>");
   <option value="">Now Loading...</option>
 </select><br>
