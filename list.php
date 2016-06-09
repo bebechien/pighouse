@@ -49,7 +49,7 @@ function listup($d, $prefix, $sort_type) {
 }
 
 // sort by name
-listup("video/", "", "oldest");
+listup("video/", "", "");
 
 // oldest to latest
 listup("video/", "", "oldest");
