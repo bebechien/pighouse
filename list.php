@@ -4,7 +4,7 @@ $txt = file_get_contents('http://remote.url/list.txt');
 echo $txt;
 ?>
 
-// video 폴더 밑에 있는 mp4 목록을 만드는 예제 (정렬 옵션 추가)
+// video 폴더 밑에 있는 동영상 목록을 만드는 예제 (정렬 옵션 추가)
 <?php
 function scan_dir($dir, $sort_type) {
   $ignored = array('.', '..', '.svn', '.htaccess');
@@ -32,12 +32,14 @@ function scan_dir($dir, $sort_type) {
 }
 
 function file_list($d,$x, $sort_type) {
-  foreach(scan_dir($d, $sort_type) as $f)if(is_file($d.'/'.$f)&&(($x)?ereg($x.'$',$f):1))$l[]=$f;
+  $imp = implode('|', $x);
+  foreach(scan_dir($d, $sort_type) as $f) if(is_file($d.'/'.$f) && preg_match('/^.*\.('.$imp.')$/i', $f)) $l[]=$f;
   return $l;
 }
 
 function listup($d, $prefix, $sort_type) {
-  $list = file_list($d, "mp4", $sort_type);
+  $video_ext = array("mp4", "m4v", "mkv", "avi", "ts");
+  $list = file_list($d, $video_ext, $sort_type);
   foreach($list as $file) :
     if (!empty($prefix)) {
       print($prefix."http://server.url/".$d.rawurlencode($file)."\n");
