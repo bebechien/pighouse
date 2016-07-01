@@ -102,10 +102,10 @@ function scan_video($prefix, $dir, $sort_type = '', $parent = '') {
 }
 
 // sort by name
-scan_video("", "video/");
+scan_video("", "video");
 
 // oldest to latest
-scan_video("", "video/", "oldest");
+scan_video("", "video", "oldest");
 // latest to oldest
-scan_video("", "video/", "latest");
+scan_video("", "video", "latest");
 ?>
