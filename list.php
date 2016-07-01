@@ -57,5 +57,46 @@ listup("video/", "", "");
 listup("video/", "", "oldest");
 // latest to oldest
 listup("video/", "", "latest");
+?>
 
+// video 폴더를 recursive하게 탐색해 동영상 목록을 만드는 예제 (정렬 옵션 추가)
+<?php
+function scan_video($prefix, $dir, $sort_type = '', $parent = '') {
+  $dir = rtrim($dir, '\\/');
+  $ignored = array('.', '..', '.svn', '.htaccess');
+
+  $files = array();    
+  foreach (scandir($dir) as $file) {
+    if (in_array($file, $ignored)) continue;
+    if (is_dir("$dir/$file")) scan_video($prefix, "$dir/$file", $sort_type, "$parent$file/");
+    else $files[$file] = filemtime($dir . '/' . $file);
+  }
+
+  if (empty($sort_type)) {
+    $files = array_keys($files);
+  }
+  else {
+    if($sort_type == "oldest") {
+      asort($files);
+    }
+    else if($sort_type == "latest") {
+      arsort($files);
+    }
+    $files = array_keys($files);
+  }
+
+  $video_ext = array("mp4", "m4v", "mkv", "avi", "ts");
+  $imp = implode('|', $video_ext);
+
+  foreach ($files as $file) {
+    if(preg_match('/^.*\.('.$imp.')$/i', $file)) {
+      if (!empty($prefix)) {
+        print($prefix."http://server.url/".$parent.rawurlencode($file)."\n");
+      }
+      else {
+        print("http://server.url/".$parent.rawurlencode($file)."\n");
+      }
+    }
+  }
+}
 ?>
