@@ -90,11 +90,12 @@ function scan_video($prefix, $dir, $sort_type = '', $parent = '') {
 
   foreach ($files as $file) {
     if(preg_match('/^.*\.('.$imp.')$/i', $file)) {
+      $path = implode("/", array_map("rawurlencode", explode("/", $dir."/".$file)));
       if (!empty($prefix)) {
-        print($prefix."http://server.url/".$dir."/".rawurlencode($file)."\n");
+        print($prefix."http://server.url/".$path."\n");
       }
       else {
-        print("http://server.url/".$dir."/".rawurlencode($file)."\n");
+        print("http://server.url/".$path."\n");
       }
     }
   }
