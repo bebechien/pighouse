@@ -1,0 +1,3 @@
+@echo off
+for %%f in (%*) do transcode.bat mp4 "%%~f"
+set /p DUMMY=Hit ENTER to continue...
