@@ -61,14 +61,14 @@ listup("video/", "", "latest");
 
 // video 폴더를 recursive하게 탐색해 동영상 목록을 만드는 예제 (정렬 옵션 추가)
 <?php
-function scan_video($prefix, $dir, $sort_type = '', $parent = '') {
+function scan_video($prefix, $dir, $sort_type = '', $contains='', $parent = '') {
   $dir = rtrim($dir, '\\/');
   $ignored = array('.', '..', '.svn', '.htaccess');
 
   $files = array();    
   foreach (scandir($dir) as $file) {
     if (in_array($file, $ignored)) continue;
-    if (is_dir("$dir/$file")) scan_video($prefix, "$dir/$file", $sort_type, "$parent$file/");
+    if (is_dir("$dir/$file")) scan_video($prefix, "$dir/$file", $sort_type, $contains, "$parent$file/");
     else $files[$file] = filemtime($dir . '/' . $file);
   }
 
@@ -89,7 +89,9 @@ function scan_video($prefix, $dir, $sort_type = '', $parent = '') {
   $imp = implode('|', $video_ext);
 
   foreach ($files as $file) {
-    if(preg_match('/^.*\.('.$imp.')$/i', $file)) {
+    $add_list = true;
+    if (!empty($contains) && !preg_match('/'.$contains.'/', $file)) $add_list=false;
+    if(preg_match('/^.*\.('.$imp.')$/i', $file) && $add_list) {
       $path = implode("/", array_map("rawurlencode", explode("/", $dir."/".$file)));
       if (!empty($prefix)) {
         print($prefix."http://server.url/".$path."\n");
@@ -108,4 +110,8 @@ scan_video("", "video");
 scan_video("", "video", "oldest");
 // latest to oldest
 scan_video("", "video", "latest");
+
+// contains specific word in a filename
+scan_video("", "video", "", "x265");
+
 ?>
