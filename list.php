@@ -90,7 +90,7 @@ function scan_video($prefix, $dir, $sort_type = '', $contains='', $parent = '') 
 
   foreach ($files as $file) {
     $add_list = true;
-    if (!empty($contains) && !preg_match('/'.$contains.'/', $file)) $add_list=false;
+    if (!empty($contains) && !preg_match('/'.$contains.'/i', $file)) $add_list=false;
     if(preg_match('/^.*\.('.$imp.')$/i', $file) && $add_list) {
       $path = implode("/", array_map("rawurlencode", explode("/", $dir."/".$file)));
       if (!empty($prefix)) {
