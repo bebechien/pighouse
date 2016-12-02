@@ -10,7 +10,8 @@ IF %argC% == 1 (
 
     FOR %%f IN (queue\*) DO (
         move "%%f" %1
-        HandBrakeCLI-10bit.exe --vfr -b 1024k -i "%~1\%%~nxf" -o "%%~nf.mp4" -e x265_10bit --encoder-profile main10 -E copy
+REM     HandBrakeCLI-10bit.exe -i "%~1\%%~nxf" -o "%%~nf.mp4" -e x265_10bit --encoder-profile main10 -E copy --all-audio --all-subtitles
+        HandBrakeCLI-10bit.exe --vfr -b 1024k -i "%~1\%%~nxf" -o "%%~nf.mp4" -e x265_10bit --encoder-profile main10 -E copy --all-audio --all-subtitles
         goto COPYFILES
     )
 
