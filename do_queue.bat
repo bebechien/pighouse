@@ -1,4 +1,5 @@
 @echo off
+SETLOCAL enabledelayedexpansion
 set argC=0
 for %%x in (%*) do Set /A argC+=1
 
@@ -10,8 +11,13 @@ IF %argC% == 1 (
 
     FOR %%f IN (queue\*) DO (
         move "%%f" %1
-REM     HandBrakeCLI-10bit.exe -i "%~1\%%~nxf" -o "%%~nf.mp4" -e x265_10bit --encoder-profile main10 -E copy --all-audio --all-subtitles
-        HandBrakeCLI-10bit.exe --vfr -b 1024k -i "%~1\%%~nxf" -o "%%~nf.mp4" -e x265_10bit --encoder-profile main10 -E copy --all-audio --all-subtitles
+        set outfile=%%~nf.mkv
+        set outfile=!outfile:x.264=x.265!
+        set outfile=!outfile:x264=x265!
+        set outfile=!outfile:X264=X265!
+        set outfile=!outfile:AVC=HEVC!
+REM     HandBrakeCLI-10bit.exe -i "%~1\%%~nxf" -o "!outfile!" -e x265_10bit --encoder-profile main10 -E copy --all-audio --all-subtitles
+        HandBrakeCLI-10bit.exe --vfr -b 1024k -i "%~1\%%~nxf" -o "!outfile!" -e x265_10bit --encoder-profile main10 -E copy --all-audio --all-subtitles
         goto COPYFILES
     )
 
