@@ -5,6 +5,7 @@ import (
   "fmt"
   "bytes"
   "bufio"
+  "encoding/binary"
   iconv "github.com/djimenez/iconv-go"
 )
 
@@ -90,8 +91,7 @@ func ReadDIR(path string) ([]Article, error) {
     singlebuf, _ = b.ReadByte()
     tm_mday := int(singlebuf)
     b.Next(1) // skip fileheader.isdirectory
-    singlebuf, _ = b.ReadByte()
-    readcnt := int(singlebuf)
+    readcnt := int(binary.LittleEndian.Uint16(b.Next(2)))
 
     ArticleList = append(ArticleList, Article{idx, filename, owner, title, tm_year, tm_mon, tm_mday, readcnt})
   }
