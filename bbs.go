@@ -42,6 +42,17 @@ type Article struct {
   title string
 }
 
+type Article struct {
+  id int
+  filename string
+  owner string
+  title string
+  tm_year int
+  tm_mon int
+  tm_mday int
+  readcnt int
+}
+
 func ReadDIR(path string) ([]Article, error) {
   var ArticleList []Article
 
@@ -61,30 +72,28 @@ func ReadDIR(path string) ([]Article, error) {
     if err != nil {
       break
     }
-    // each entry starts with the filename which is typically "77 46"
+    // each entry starts with the filename which is typically "77 46" ("M." in ASCII CODE)
     //fmt.Println(entryBuf)
 
     var b bytes.Buffer
-    b.Grow(64)
     b.Write(entryBuf)
-    rdbuf := make([]byte, STRLEN)
-    _, err = b.Read(rdbuf)
-    if err != nil {
-      break
-    }
-    filename := string(rdbuf)
-    _, err = b.Read(rdbuf)
-    if err != nil {
-      break
-    }
-    owner := string(rdbuf)
-    _, err = b.Read(rdbuf)
-    if err != nil {
-      break
-    }
-    title, _ := iconv.ConvertString(string(rdbuf), "euc-kr", "utf-8")
+    var singlebuf byte
 
-    ArticleList = append(ArticleList, Article{idx, filename, owner, title})
+    filename := string(b.Next(STRLEN))
+    owner := string(b.Next(STRLEN))
+    title, _ := iconv.ConvertString(string(b.Next(STRLEN)), "euc-kr", "utf-8")
+    b.Next(4) // skip fileheader.level
+    singlebuf, _ = b.ReadByte()
+    tm_year := int(singlebuf)
+    singlebuf, _ = b.ReadByte()
+    tm_mon := int(singlebuf)
+    singlebuf, _ = b.ReadByte()
+    tm_mday := int(singlebuf)
+    b.Next(1) // skip fileheader.isdirectory
+    singlebuf, _ = b.ReadByte()
+    readcnt := int(singlebuf)
+
+    ArticleList = append(ArticleList, Article{idx, filename, owner, title, tm_year, tm_mon, tm_mday, readcnt})
   }
 
   return ArticleList, err
@@ -102,8 +111,7 @@ func GenerateIdx(path string, list []Article) {
   fmt.Fprint(w, INDEX_HEADER)
 
   for _, item := range list {
-    fmt.Fprintf(w, "%d ", item.id)
-    fmt.Fprintf(w, "%s, %s, %s<BR>", item.filename, item.owner, item.title)
+    fmt.Fprintf(w, "%d | %s | %d/%d/%d | %d | %s | %s<BR>", item.id, item.owner, item.tm_year+1900, item.tm_mon, item.tm_mday, item.readcnt, item.filename, item.title)
     fmt.Fprintln(w)
   }
 
