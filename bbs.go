@@ -14,6 +14,27 @@ const STRUCT_SIZE = 3072
 const INDEX_HEADER = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body>"
 const INDEX_FOOTER = "</body></html>"
 
+//struct fileheader {             /* This structure is used to hold data in */
+//	char filename[STRLEN] ;     /* the BOARDS and DIR files               */
+//	char owner[STRLEN] ;
+//	char title[STRLEN] ;
+//	unsigned level;
+//	unsigned char tm_year;	/* struct tm 구조 멤버와 동일하게 이름붙였음 */
+//	unsigned char tm_mon;
+//	unsigned char tm_mday;
+//	unsigned char isdirectory; /* chopin */
+//				   /* .BOARDS 파일에만 사용되는 플랙이고 */
+//				   /* 보드이름이면 0 		*/
+//				   /* 디렉토리 이름이면 1 	*/
+//	unsigned short int readcnt;/* 조회수 */
+//	unsigned char directory_zapped; /* 특정 디렉토리를 뉴에서 읽히지 
+//					않도록 하는 플래그 
+//					closed보드등에서 이용 */
+//	/* dummy */
+//	unsigned char dummy[217];
+//	unsigned char accessed[MAXUSERS] ;
+//};
+
 type Article struct {
   id int
   filename string
