@@ -1,19 +1,16 @@
 package main
 
 import (
-  "os"
-  "fmt"
-  "bytes"
-  "bufio"
-  "encoding/binary"
-  iconv "github.com/djimenez/iconv-go"
+	"bufio"
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"os"
+	"github.com/djimenez/iconv-go"
 )
 
 const STRLEN = 80
 const STRUCT_SIZE = 3072
-
-const INDEX_HEADER = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body>"
-const INDEX_FOOTER = "</body></html>"
 
 //struct fileheader {             /* This structure is used to hold data in */
 //	char filename[STRLEN] ;     /* the BOARDS and DIR files               */
@@ -28,8 +25,8 @@ const INDEX_FOOTER = "</body></html>"
 //				   /* 보드이름이면 0 		*/
 //				   /* 디렉토리 이름이면 1 	*/
 //	unsigned short int readcnt;/* 조회수 */
-//	unsigned char directory_zapped; /* 특정 디렉토리를 뉴에서 읽히지 
-//					않도록 하는 플래그 
+//	unsigned char directory_zapped; /* 특정 디렉토리를 뉴에서 읽히지
+//					않도록 하는 플래그
 //					closed보드등에서 이용 */
 //	/* dummy */
 //	unsigned char dummy[217];
@@ -37,100 +34,147 @@ const INDEX_FOOTER = "</body></html>"
 //};
 
 type Article struct {
-  id int
-  filename string
-  owner string
-  title string
-}
-
-type Article struct {
-  id int
-  filename string
-  owner string
-  title string
-  tm_year int
-  tm_mon int
-  tm_mday int
-  readcnt int
+	id       int
+	filename string
+	owner    string
+	title    string
+	tm_year  int
+	tm_mon   int
+	tm_mday  int
+	readcnt  int
 }
 
 func ReadDIR(path string) ([]Article, error) {
-  var ArticleList []Article
+	var ArticleList []Article
 
-  file, err := os.Open(path + "/.DIR")
-  if err != nil {
-      return ArticleList, err
-  }
-  defer file.Close()
+	file, err := os.Open(path + "/.DIR")
+	if err != nil {
+		return ArticleList, err
+	}
+	defer file.Close()
 
-  entryBuf := make([]byte, STRUCT_SIZE)
+	entryBuf := make([]byte, STRUCT_SIZE)
 
-  idx := 0
-  for true {
-    idx++
+	idx := 0
+	for true {
+		idx++
 
-    _, err := file.Read(entryBuf)
-    if err != nil {
-      break
-    }
-    // each entry starts with the filename which is typically "77 46" ("M." in ASCII CODE)
-    //fmt.Println(entryBuf)
+		_, err := file.Read(entryBuf)
+		if err != nil {
+			break
+		}
+		// each entry starts with the filename which is typically "77 46" ("M." in ASCII CODE)
+		//fmt.Println(entryBuf)
 
-    var b bytes.Buffer
-    b.Write(entryBuf)
-    var singlebuf byte
+		var b bytes.Buffer
+		b.Write(entryBuf)
+		var singlebuf byte
 
-    filename := string(b.Next(STRLEN))
-    owner := string(b.Next(STRLEN))
-    title, _ := iconv.ConvertString(string(b.Next(STRLEN)), "euc-kr", "utf-8")
-    b.Next(4) // skip fileheader.level
-    singlebuf, _ = b.ReadByte()
-    tm_year := int(singlebuf)
-    singlebuf, _ = b.ReadByte()
-    tm_mon := int(singlebuf)
-    singlebuf, _ = b.ReadByte()
-    tm_mday := int(singlebuf)
-    b.Next(1) // skip fileheader.isdirectory
-    readcnt := int(binary.LittleEndian.Uint16(b.Next(2)))
+		filename := string(bytes.Trim(b.Next(STRLEN), "\x00"))
+		owner, _ := iconv.ConvertString(string(bytes.Trim(b.Next(STRLEN), "\x00")), "euc-kr", "utf-8")
+		title, _ := iconv.ConvertString(string(bytes.Trim(b.Next(STRLEN), "\x00")), "euc-kr", "utf-8")
+		b.Next(4) // skip fileheader.level
+		singlebuf, _ = b.ReadByte()
+		tm_year := int(singlebuf)
+		singlebuf, _ = b.ReadByte()
+		tm_mon := int(singlebuf)
+		singlebuf, _ = b.ReadByte()
+		tm_mday := int(singlebuf)
+		b.Next(1) // skip fileheader.isdirectory
+		readcnt := int(binary.LittleEndian.Uint16(b.Next(2)))
 
-    ArticleList = append(ArticleList, Article{idx, filename, owner, title, tm_year, tm_mon, tm_mday, readcnt})
-  }
+		ArticleList = append(ArticleList, Article{idx, filename, owner, title, tm_year, tm_mon, tm_mday, readcnt})
+	}
 
-  return ArticleList, err
+	return ArticleList, err
 }
 
+const INDEX_HEADER = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head>" +
+	"<body><table><tr><th>번호</th><th>글쓴이</th><th>날짜</th><th>조회수</th><th>제목</th></tr>"
+const INDEX_FOOTER = "</table></body></html>"
+
 func GenerateIdx(path string, list []Article) {
-  file, err := os.Create(path + "/index.html")
-  if err != nil {
-    fmt.Println(err)
-    return
-  }
-  defer file.Close()
-  w := bufio.NewWriter(file)
+	file, err := os.Create(path + "/index.html")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+	w := bufio.NewWriter(file)
 
-  fmt.Fprint(w, INDEX_HEADER)
+	fmt.Fprint(w, INDEX_HEADER)
 
-  for _, item := range list {
-    fmt.Fprintf(w, "%d | %s | %d/%d/%d | %d | %s | %s<BR>", item.id, item.owner, item.tm_year+1900, item.tm_mon, item.tm_mday, item.readcnt, item.filename, item.title)
-    fmt.Fprintln(w)
-  }
+	for _, item := range list {
+		fmt.Fprintf(w, "<tr onclick=\"location.href=`%s.html`\"=><td>%d</td><td>%s</td><td>%d/%d/%d</td><td>%d</td><td>%s</td></tr>\n", item.filename, item.id, item.owner, item.tm_year+1900, item.tm_mon, item.tm_mday, item.readcnt, item.title)
+	}
 
-  fmt.Fprint(w, INDEX_FOOTER)
-  w.Flush()
+	fmt.Fprint(w, INDEX_FOOTER)
+	w.Flush()
+}
+
+const PAGE_HEADER = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body id=\"body\">"
+const PAGE_FOOTER = "</body></html>"
+
+func GeneratePages(src string, path string, list []Article) {
+  idx := 0
+	for _, item := range list {
+		file, err := os.Create(path + "/" + item.filename + ".html")
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		defer file.Close()
+		w := bufio.NewWriter(file)
+
+		prev_move := ""
+		if idx > 0 {
+			prev_move = "case \"KeyP\":window.location=\""+list[idx-1].filename+".html\";break;"
+		}
+		next_move := ""
+		if idx < len(list)-1 {
+			next_move = "case \"KeyN\":window.location=\""+list[idx+1].filename+".html\";break;"
+		}
+
+		fmt.Fprintf(w, PAGE_HEADER)
+		fmt.Fprintf(w, "<script>window.addEventListener(\"keydown\", (event) => {switch(event.code) {" +
+		"case \"KeyQ\":window.location=\"index.html\";break;" + prev_move + next_move +
+		"}}, true);</script>")
+
+		src, err := os.ReadFile(src + "/" + item.filename)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		text, _ := iconv.ConvertString(string(bytes.Trim(src, "\x00")), "euc-kr", "utf-8")
+		fmt.Fprintf(w, "<pre>%s</pre>", text)
+
+		fmt.Fprintf(w, PAGE_FOOTER)
+		w.Flush()
+
+		idx++
+	}
 }
 
 func main() {
-  board := "/path/to/the/board"
-  outpath := "/path/to/the/output"
-  if err := os.MkdirAll(outpath, os.ModePerm); err != nil {
-    fmt.Println(err)
-    return
-  }
+	if len(os.Args) != 3 {
+		fmt.Printf("Usage: %s <path-to-board> <path-to-output>\n", os.Args[0])
+		return
+	}
 
-  articles, err := ReadDIR(board)
-  if err != nil {
-    fmt.Println(err)
-  }
+	board := os.Args[1]
+	outpath := os.Args[2]
 
-  GenerateIdx(outpath, articles)
+	if err := os.MkdirAll(outpath, os.ModePerm); err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	articles, err := ReadDIR(board)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	GenerateIdx(outpath, articles)
+	GeneratePages(board, outpath, articles)
 }
