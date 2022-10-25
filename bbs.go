@@ -90,7 +90,7 @@ func ReadDIR(path string) ([]Article, error) {
 }
 
 const INDEX_HEADER = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head>" +
-	"<body><table><tr><th>번호</th><th>글쓴이</th><th>날짜</th><th>조회수</th><th>제목</th></tr>"
+	"<body><table><tr><th>번호</th><th>글쓴이</th><th>날짜</th><th>조회수</th><th>제목</th></tr>\n"
 const INDEX_FOOTER = "</table></body></html>"
 
 func GenerateIdx(path string, list []Article) {
@@ -99,20 +99,20 @@ func GenerateIdx(path string, list []Article) {
 		fmt.Println(err)
 		return
 	}
-	defer file.Close()
 	w := bufio.NewWriter(file)
 
 	fmt.Fprint(w, INDEX_HEADER)
 
 	for _, item := range list {
-		fmt.Fprintf(w, "<tr onclick=\"location.href=`%s.html`\"=><td>%d</td><td>%s</td><td>%d/%d/%d</td><td>%d</td><td>%s</td></tr>\n", item.filename, item.id, item.owner, item.tm_year+1900, item.tm_mon, item.tm_mday, item.readcnt, item.title)
+		fmt.Fprintf(w, "<tr onclick=\"location.href=`%s.html`\"=><td>%d</td><td>%s</td><td>%d/%d/%d</td><td>%d</td><td>%s</td></tr>\n", item.filename, item.id, item.owner, item.tm_year+1900, item.tm_mon+1, item.tm_mday, item.readcnt, item.title)
 	}
 
 	fmt.Fprint(w, INDEX_FOOTER)
 	w.Flush()
+	file.Close()
 }
 
-const PAGE_HEADER = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body id=\"body\">"
+const PAGE_HEADER = "<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"></head><body id=\"body\">\n"
 const PAGE_FOOTER = "</body></html>"
 
 func GeneratePages(src string, path string, list []Article) {
@@ -123,7 +123,6 @@ func GeneratePages(src string, path string, list []Article) {
 			fmt.Println(err)
 			return
 		}
-		defer file.Close()
 		w := bufio.NewWriter(file)
 
 		prev_move := ""
@@ -138,11 +137,12 @@ func GeneratePages(src string, path string, list []Article) {
 		fmt.Fprintf(w, PAGE_HEADER)
 		fmt.Fprintf(w, "<script>window.addEventListener(\"keydown\", (event) => {switch(event.code) {" +
 		"case \"KeyQ\":window.location=\"index.html\";break;" + prev_move + next_move +
-		"}}, true);</script>")
+		"}}, true);</script>\n")
 
 		src, err := os.ReadFile(src + "/" + item.filename)
 		if err != nil {
 			fmt.Println(err)
+			file.Close()
 			return
 		}
 
@@ -151,6 +151,7 @@ func GeneratePages(src string, path string, list []Article) {
 
 		fmt.Fprintf(w, PAGE_FOOTER)
 		w.Flush()
+		file.Close()
 
 		idx++
 	}
