@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"strings"
 	"github.com/djimenez/iconv-go"
 )
 
@@ -38,9 +39,7 @@ type Article struct {
 	filename string
 	owner    string
 	title    string
-	tm_year  int
-	tm_mon   int
-	tm_mday  int
+	date     string
 	readcnt  int
 }
 
@@ -83,7 +82,9 @@ func ReadDIR(path string) ([]Article, error) {
 		b.Next(1) // skip fileheader.isdirectory
 		readcnt := int(binary.LittleEndian.Uint16(b.Next(2)))
 
-		ArticleList = append(ArticleList, Article{idx, filename, owner, title, tm_year, tm_mon, tm_mday, readcnt})
+		date := fmt.Sprintf("%d/%d/%d", tm_year+1900, tm_mon+1, tm_mday)
+
+		ArticleList = append(ArticleList, Article{idx, filename, owner, title, date, readcnt})
 	}
 
 	return ArticleList, err
@@ -104,7 +105,7 @@ func GenerateIdx(path string, list []Article) {
 	fmt.Fprint(w, INDEX_HEADER)
 
 	for _, item := range list {
-		fmt.Fprintf(w, "<tr onclick=\"location.href=`%s.html`\"=><td>%d</td><td>%s</td><td>%d/%d/%d</td><td>%d</td><td>%s</td></tr>\n", item.filename, item.id, item.owner, item.tm_year+1900, item.tm_mon+1, item.tm_mday, item.readcnt, item.title)
+		fmt.Fprintf(w, "<tr onclick=\"location.href=`%s.html`\"=><td>%d</td><td>%s</td><td>%s</td><td>%d</td><td>%s</td></tr>\n", item.filename, item.id, item.owner, item.date, item.readcnt, item.title)
 	}
 
 	fmt.Fprint(w, INDEX_FOOTER)
@@ -139,14 +140,14 @@ func GeneratePages(src string, path string, list []Article) {
 		"case \"KeyQ\":window.location=\"index.html\";break;" + prev_move + next_move +
 		"}}, true);</script>\n")
 
-		src, err := os.ReadFile(src + "/" + item.filename)
+		src_data, err := os.ReadFile(src + "/" + item.filename)
 		if err != nil {
 			fmt.Println(err)
 			file.Close()
 			return
 		}
 
-		text, _ := iconv.ConvertString(string(bytes.Trim(src, "\x00")), "euc-kr", "utf-8")
+		text, _ := iconv.ConvertString(string(bytes.Trim(src_data, "\x00")), "euc-kr", "utf-8")
 		fmt.Fprintf(w, "<pre>%s</pre>", text)
 
 		fmt.Fprintf(w, PAGE_FOOTER)
@@ -155,6 +156,55 @@ func GeneratePages(src string, path string, list []Article) {
 
 		idx++
 	}
+}
+
+func FallbackDIR(path string) ([]Article, error) {
+	var ArticleList []Article
+
+	files, err := os.ReadDir(path + "/.")
+	if err != nil {
+		return ArticleList, err
+	}
+
+	idx := 0
+	for _, file := range files {
+		idx++
+
+		src, err := os.ReadFile(path + "/" + file.Name())
+		if err != nil {
+			return ArticleList, err
+		}
+		text, _ := iconv.ConvertString(string(bytes.Trim(src, "\x00")), "euc-kr", "utf-8")
+		lines := strings.Split(text, "\n")
+		if len(lines) < 3 {
+			fmt.Printf("skip possible broken file [%s]\n", file.Name())
+			fmt.Println(text)
+			idx--
+			continue
+		}
+
+		owner := ""
+		title := file.Name()
+		date := ""
+		if strings.HasPrefix(lines[0], "Posted By:") {
+			// old loco bbs type
+			owner = strings.Fields(lines[0])[2]
+			title = lines[1][11:]
+			date = lines[2][11:]
+		} else if strings.HasPrefix(lines[0], "글쓴이:") {
+			owner = strings.Fields(lines[0])[1]
+			date = lines[1][10:]
+			title = lines[2][10:]
+		} else {
+			fmt.Printf("skip unknown format file [%s]\n", file.Name())
+			idx--
+			continue
+		}
+
+		ArticleList = append(ArticleList, Article{idx, file.Name(), owner, title, date, 0})
+	}
+
+	return ArticleList, nil
 }
 
 func main() {
@@ -171,9 +221,14 @@ func main() {
 		return
 	}
 
+	var articles []Article
 	articles, err := ReadDIR(board)
+	if os.IsNotExist(err) {
+		articles, err = FallbackDIR(board)
+	}
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	GenerateIdx(outpath, articles)
