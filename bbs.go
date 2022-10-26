@@ -221,7 +221,6 @@ func main() {
 		return
 	}
 
-	var articles []Article
 	articles, err := ReadDIR(board)
 	if os.IsNotExist(err) {
 		articles, err = FallbackDIR(board)
