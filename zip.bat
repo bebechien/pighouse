@@ -11,7 +11,7 @@ for /D %%r in (*.*) do (
 
 :: from queue
   mkdir "..\done\%%r"
-  mv "C:\Users\bebechien\Desktop\mm\*.*" "..\done\%%r\"
+  mv "C:\Users\bebechien\Desktop\mm"/* "..\done\%%r\"
   mv "%%r" ..\trash
 )
 
