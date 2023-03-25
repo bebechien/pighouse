@@ -14,7 +14,7 @@ for /D %%r in (*.*) do (
 
 :: from queue
   mkdir "..\done\%%r"
-  move "%curpath%working"/* "..\done\%%r"
+  move "..\working\*" "..\done\%%r"
   move "%%r" ..\trash
 )
 
