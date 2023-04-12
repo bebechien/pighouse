@@ -5,6 +5,13 @@ import telegram, asyncio
 import json
 from flask import Flask, jsonify, request
 
+bot_token = 'YOUR_BOT_TOKEN_HERE'	
+chat_id = 'YOUR_USER_ID_HERE'
+
+async def send_telegram_message(msg):
+    bot = telegram.Bot(token=bot_token)
+    await bot.send_message(chat_id=chat_id, text=msg, parse_mode="HTML")
+
 app = Flask(__name__)
 
 clients_data = {}
@@ -107,29 +114,33 @@ def data():
     clients_data[client_id]['memory_usage'] = clients_data[client_id]['memory_usage'][-10:]
     clients_data[client_id]['storage_usage'] = clients_data[client_id]['storage_usage'][-10:]
 
+    message = ''
+    if content['cpu_load'] > 200:
+        message += f"<b>WARNING</b>\n{client_id}'s CPU load is too high ({content['cpu_load']})"
+
+    if content['storage_usage'] > 80:
+        message += f"<b>WARNING</b>\n{client_id}'s Storage usage is too high ({content['storage_usage']})"
+
+    if len(message) > 0:
+        asyncio.run(send_telegram_message(message))
+
     return jsonify({'status': 'ok'})
 
 @app.route('/send_summary', methods=['POST'])
 def send_summary():
-    bot_token = 'YOUR_BOT_TOKEN_HERE'
-    chat_id = 'YOUR_USER_ID_HERE'
     if not bot_token or not chat_id:
         return jsonify({'status': 'error', 'message': 'Missing Telegram bot token or chat ID'})
 
-    message = 'reporting\n'
+    message = '-=: Hourly Report :=-\n'
     for client_id, client_data in clients_data.items():
-        message += f"{client_id}\nCPU load: {client_data['cpu_load'][-1]}\nMemory usage: {client_data['memory_usage'][-1]}\nStorage usage: {client_data['storage_usage'][-1]}\n\n"
-    
-    async def send_telegram_message():
-        bot = telegram.Bot(token=bot_token)
-        await bot.send_message(chat_id=chat_id, text=message)
+        message += f"+ <b>{client_id}</b>\n<pre>CPU load: {client_data['cpu_load'][-1]}\nMemory usage: {client_data['memory_usage'][-1]}\nStorage usage: {client_data['storage_usage'][-1]}</pre>"
 
-    asyncio.run(send_telegram_message())
+    asyncio.run(send_telegram_message(message))
 
     return jsonify({'status': 'ok'})
 
 if __name__ == '__main__':
-    app.run(debug=False,host='0.0.0.0')
+    app.run(debug=True,host='0.0.0.0')
 
     while True:
         now = datetime.datetime.now()
