@@ -133,7 +133,7 @@ def send_summary():
 
     message = '-=: Hourly Report :=-\n'
     for client_id, client_data in clients_data.items():
-        message += f"+ <b>{client_id}</b>\n<pre>CPU load: {client_data['cpu_load'][-1]}\nMemory usage: {client_data['memory_usage'][-1]}\nStorage usage: {client_data['storage_usage'][-1]}</pre>"
+        message += f"+ <b>{client_id}</b>\n<pre>CPU load: {client_data['cpu_load'][-1]}\nMemory usage: {client_data['memory_usage'][-1]}\nStorage usage: {client_data['storage_usage'][-1]}</pre>\n"
 
     asyncio.run(send_telegram_message(message))
 
