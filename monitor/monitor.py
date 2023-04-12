@@ -1,7 +1,7 @@
 import os
 import time
 import datetime
-import telegram, asyncio
+import telegram, asyncio, schedule
 import json
 from flask import Flask, jsonify, request
 
@@ -141,10 +141,8 @@ def send_summary():
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0')
+    schedule.every().hour.do(send_summary)
 
     while True:
-        now = datetime.datetime.now()
-        if now.minute == 0: # Send the message every hour
-            response = requests.post('http://localhost:5000/send_summary')
-            print(response.json())
-        time.sleep(60)  # Wait for 1 minute before checking again
+        schedule.run_pending()
+        time.sleep(1)
