@@ -1,7 +1,7 @@
 import os
 import time
 import datetime
-import telegram, asyncio, schedule
+import telegram, asyncio
 import json
 from flask import Flask, jsonify, request
 
@@ -141,8 +141,3 @@ def send_summary():
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0')
-    schedule.every().hour.do(send_summary)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
