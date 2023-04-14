@@ -7,10 +7,15 @@ from flask import Flask, jsonify, request
 
 bot_token = 'YOUR_BOT_TOKEN_HERE'
 chat_id = 'YOUR_USER_ID_HERE'
+project_abs_path = 'YOUR_CODE_LOCAL_PATH_HERE'
+image_idx = 0
 
-async def send_telegram_message(msg):
+async def send_telegram_message(msg, photo_obj = None):
     bot = telegram.Bot(token=bot_token)
-    await bot.send_message(chat_id=chat_id, text=msg, parse_mode="HTML")
+    if photo_obj is not None:
+        await bot.send_photo(chat_id=chat_id, photo=photo_obj, caption=msg, parse_mode="HTML")
+    else:
+        await bot.send_message(chat_id=chat_id, text=msg, parse_mode="HTML")
 
 app = Flask(__name__)
 
@@ -19,6 +24,8 @@ storages_data = {}
 
 @app.route('/', methods=['GET'])
 def index():
+    global image_idx
+
     cpu_chart_data = []
     mem_chart_data = []
     storage_chart_data = []
@@ -107,7 +114,6 @@ def index():
         </script>
     """
 
-    image_idx = 0
     if recent_cpu_loads:
         image_idx = int(max(recent_cpu_loads)/10)
         if image_idx > 10:
@@ -190,6 +196,8 @@ def storage():
 
 @app.route('/send_summary', methods=['POST'])
 def send_summary():
+    global image_idx
+
     if not bot_token or not chat_id:
         return jsonify({'status': 'error', 'message': 'Missing Telegram bot token or chat ID'})
 
@@ -197,7 +205,7 @@ def send_summary():
     for client_id, client_data in clients_data.items():
         message += f"+ <b>{client_id}</b>\n<pre>CPU load: {client_data['cpu_load'][-1]}\nMemory usage: {client_data['memory_usage'][-1]}\nStorage usage: {client_data['storage_usage'][-1]}</pre>\n"
 
-    asyncio.run(send_telegram_message(message))
+    asyncio.run(send_telegram_message(message, open("{}/static/{:02d}.png".format(project_abs_path, image_idx), 'rb')))
 
     return jsonify({'status': 'ok'})
 
