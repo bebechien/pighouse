@@ -10,6 +10,8 @@ chat_id = 'YOUR_USER_ID_HERE'
 project_abs_path = 'YOUR_CODE_LOCAL_PATH_HERE'
 image_idx = 0
 
+NOTIFY_THRESHOLD = 600  # Notify if a client has not reported for 10 minute
+
 async def send_telegram_message(msg, photo_obj = None):
     bot = telegram.Bot(token=bot_token)
     if photo_obj is not None:
@@ -22,10 +24,30 @@ app = Flask(__name__)
 clients_data = {}
 storages_data = {}
 
+def is_all_alive():
+    all_alive = True
+    for client_id, client_data in clients_data.items():
+        if client_data['alive_warning_flag']:
+            all_alive = False
+    
+    return all_alive
+
+def get_image_idx():
+    image_idx = 0
+
+    recent_cpu_loads = []
+    for client_id, client_data in clients_data.items():
+        recent_cpu_loads.append(client_data['cpu_load'][-1])
+
+    if recent_cpu_loads:
+        image_idx = int(max(recent_cpu_loads)/10)
+        if image_idx > 10:
+            image_idx = 10
+
+    return image_idx
+
 @app.route('/', methods=['GET'])
 def index():
-    global image_idx
-
     cpu_chart_data = []
     mem_chart_data = []
     storage_chart_data = []
@@ -46,7 +68,6 @@ def index():
     mem_chart_data = json.dumps(mem_chart_data)
     storage_chart_data = json.dumps(storage_chart_data)
 
-    recent_cpu_loads = []
     table_rows = []
     for client_id, client_data in clients_data.items():
         table_rows.append(
@@ -55,7 +76,6 @@ def index():
             f"<td>{client_data['memory_usage'][-1]}</td>"
             f"<td>{client_data['storage_usage'][-1]}</td></tr>"
         )
-        recent_cpu_loads.append(client_data['cpu_load'][-1])
     table_html = "<table><tr><th>Client ID</th><th>CPU Load</th><th>Memory Usage</th><th>Storage Usage</th></tr>"
     table_html += "".join(table_rows)
     table_html += "</table>"
@@ -114,12 +134,10 @@ def index():
         </script>
     """
 
-    if recent_cpu_loads:
-        image_idx = int(max(recent_cpu_loads)/10)
-        if image_idx > 10:
-            image_idx = 10
-
-    image_html = '<img src="static/{:02d}.png" width=128>'.format(image_idx)
+    if is_all_alive():
+        image_html = '<img src="static/{:02d}.png" width=128>'.format(get_image_idx())
+    else:
+        image_html = '<img src="static/mia.png" width=128>'
 
     return f"<html><body>{image_html}{chart_html}{table_html}{storage_html}</body></html>"
 
@@ -133,11 +151,14 @@ def data():
             'memory_usage': [],
             'storage_usage': [],
             'cpu_warning_flag': False,
-            'storage_warning_flag': False
+            'storage_warning_flag': False,
+            'last_report_time': time.time(),
+            'alive_warning_flag': False
         }
     clients_data[client_id]['cpu_load'].append(content['cpu_load'])
     clients_data[client_id]['memory_usage'].append(content['memory_usage'])
     clients_data[client_id]['storage_usage'].append(content['storage_usage'])
+    clients_data[client_id]['last_report_time'] = time.time()
 
     clients_data[client_id]['cpu_load'] = clients_data[client_id]['cpu_load'][-10:]
     clients_data[client_id]['memory_usage'] = clients_data[client_id]['memory_usage'][-10:]
@@ -205,7 +226,32 @@ def send_summary():
     for client_id, client_data in clients_data.items():
         message += f"+ <b>{client_id}</b>\n<pre>CPU load: {client_data['cpu_load'][-1]}\nMemory usage: {client_data['memory_usage'][-1]}\nStorage usage: {client_data['storage_usage'][-1]}</pre>\n"
 
-    asyncio.run(send_telegram_message(message, open("{}/static/{:02d}.png".format(project_abs_path, image_idx), 'rb')))
+    if is_all_alive():
+        image_path = "{}/static/{:02d}.png".format(project_abs_path, get_image_idx())
+    else:
+        image_path = "{}/static/mia.png".format(project_abs_path)
+
+    asyncio.run(send_telegram_message(message, open(image_path, 'rb')))
+
+    return jsonify({'status': 'ok'})
+
+@app.route('/check_status', methods=['POST'])
+def check_status():
+    now = time.time()
+
+    message = ''
+    for client_id, client_data in clients_data.items():
+        if now - client_data['last_report_time'] > NOTIFY_THRESHOLD:
+            if not client_data['alive_warning_flag']:
+                message += f"<b>MIA</b>\n{client_id} has not reported in the last 10 minutes.\n"
+                client_data['alive_warning_flag'] = True
+        else:
+            if client_data['alive_warning_flag']:
+                message += f"{client_id} is now back to online.\n"
+            client_data['alive_warning_flag'] = False
+    
+    if len(message) > 0:
+        asyncio.run(send_telegram_message(message))
 
     return jsonify({'status': 'ok'})
 
