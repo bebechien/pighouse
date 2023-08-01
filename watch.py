@@ -15,7 +15,7 @@ async def send_telegram_message(text, photo_obj):
     try:
       bot = telegram.Bot(token=TELEGRAM_BOT_TOKEN)
       await bot.send_photo(chat_id=TELEGRAM_CHAT_ID, photo=photo_obj, caption=text)
-    except telegram.TelegramError as e:
+    except telegram.error.TelegramError as e:
       logging.error(f"Telegram API Error: {e}")
 
 # Watchdog event handler for handling file system events
