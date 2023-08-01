@@ -30,7 +30,7 @@ class MyHandler(FileSystemEventHandler):
           message_text = f"New file added: {file_name}"
           asyncio.run(send_telegram_message(message_text, open(new_file_path, 'rb')))
 
-    def on_modified(self, event):
+    def on_moved(self, event):
         if event.is_directory:
             return
         logging.info(f"file event: {event.dest_path}")
