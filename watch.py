@@ -37,7 +37,7 @@ class MyHandler(FileSystemEventHandler):
         if event.dest_path.endswith("png"):
             moved_file_path = event.dest_path
             file_name = os.path.basename(moved_file_path)
-            message_text = f"New file added on bebehat: {file_name}"
+            message_text = f"New file added: {file_name}"
             asyncio.run(send_telegram_message(message_text, open(moved_file_path, 'rb')))
 
 # Main function to start monitoring the folder
