@@ -23,6 +23,7 @@ app = Flask(__name__)
 
 clients_data = {}
 storages_data = {}
+weathers_data = {}
 
 def is_all_alive():
     all_alive = True
@@ -51,6 +52,7 @@ def index():
     cpu_chart_data = []
     mem_chart_data = []
     storage_chart_data = []
+    weather_chart_data = []
     for client_id, client_data in clients_data.items():
         cpu_chart_data.append({
             "label": f"{client_id}",
@@ -67,6 +69,12 @@ def index():
     cpu_chart_data = json.dumps(cpu_chart_data)
     mem_chart_data = json.dumps(mem_chart_data)
     storage_chart_data = json.dumps(storage_chart_data)
+    for location, weather_data in weathers_data.items():
+        weather_chart_data.append({
+            "label": f"{location}",
+            "data": weather_data["temperature"]
+        })
+    weather_chart_data = json.dumps(weather_chart_data)
 
     table_rows = []
     for client_id, client_data in clients_data.items():
@@ -90,10 +98,22 @@ def index():
     storage_html += "".join(storage_rows)
     storage_html += "</table>"
 
+    weather_rows = []
+    for location, weather_data in weathers_data.items():
+        weather_rows.append(
+            f"<tr><td>{location}</td>"
+            f"<td>{weather_data['temperature'][-1]}</td>"
+            f"<td>{weather_data['pressure'][-1]}</td>"
+        )
+    weather_html = "<table><tr><th>Location</th><th>Temperature</th><th>Pressure</th>"
+    weather_html += "".join(weather_rows)
+    weather_html += "</table>"
+
     chart_html = f"""
         <canvas id="cpuChart" width="400" height="200"></canvas>
         <canvas id="memChart" width="400" height="200"></canvas>
         <canvas id="storageChart" width="400" height="200"></canvas>
+        <canvas id="weatherChart" width="400" height="200"></canvas>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
             var ctx = document.getElementById('cpuChart').getContext('2d');
@@ -131,6 +151,18 @@ def index():
                     responsive: false,
                 }}
             }});
+
+            var ctx4 = document.getElementById('weatherChart').getContext('2d');
+            var weatherChart = new Chart(ctx4, {{
+                type: 'line',
+                data: {{
+                    labels: {json.dumps(list(range(10)))},
+                    datasets: {weather_chart_data}
+                }},
+                options: {{
+                    responsive: false,
+                }}
+            }});
         </script>
     """
 
@@ -139,7 +171,7 @@ def index():
     else:
         image_html = '<img src="static/mia.png" width=128>'
 
-    return f"<html><body>{image_html}{chart_html}{table_html}{storage_html}</body></html>"
+    return f"<html><body>{image_html}{chart_html}{table_html}{storage_html}{weather_html}</body></html>"
 
 @app.route('/data', methods=['POST'])
 def data():
@@ -212,6 +244,24 @@ def storage():
 
     if len(message) > 0:
         asyncio.run(send_telegram_message(message))
+
+    return jsonify({'status': 'ok'})
+
+@app.route('/weather', methods=['POST'])
+def weather():
+    for content in request.json:
+        location = content['location']
+        if location not in weathers_data:
+            weathers_data[location] = {
+                'temperature': [],
+                'pressure': []
+            }
+
+        weathers_data[location]['temperature'].append(content['temperature'])
+        weathers_data[location]['pressure'].append(content['pressure'])
+
+        weathers_data[location]['temperature'] = weathers_data[location]['temperature'][-10:]
+        weathers_data[location]['pressure'] = weathers_data[location]['pressure'][-10:]
 
     return jsonify({'status': 'ok'})
 
